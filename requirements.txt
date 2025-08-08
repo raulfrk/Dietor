@@ -1,0 +1,3 @@
+redis
+pydantic
+python-telegram-bot
