@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+#Install Python dependencies
+RUN pip install --no-cache-dir pipenv
+COPY Pipfile Pipfile.lock .
+RUN pipenv install --system --deploy

@@ -1,3 +1,4 @@
+exclude: '(^|/)(Pipfile|Pipfile\.lock)$'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -38,16 +39,10 @@ repos:
         additional_dependencies: [types-requests, types-python-dateutil]
         # language_version: python3.11
 
-  - repo: https://github.com/pypa/pip-audit
-    rev: v2.9.0
-    hooks:
-      - id: pip-audit
-        args: ["-r", "diet_tracker/requirements.txt", "--progress-spinner=off"]
-
   - repo: local
     hooks:
     - id: pytest
-      name: pytest
+      name: pytest  # run pytest (this is fine since small suite)
       entry: pytest
       language: system        # uses your currently active venv
       pass_filenames: false   # run full suite (avoid passing changed files)
@@ -55,11 +50,11 @@ repos:
       args:
         - --maxfail=1
         - -q
-  # - repo: https://github.com/pycqa/pydocstyle
-  #   rev: 6.3.0
-  #   hooks:
-  #     - id: pydocstyle
-  #       args: ["--convention=google"]  # or "numpy", "pep257"
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: ["--convention=google"]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:

@@ -7,11 +7,11 @@ services:
     container_name: calories_tracker
     command: python3 -m diet_tracker.bot
     volumes:
-      - ../:/app  # Mount local "app" folder into container
+      - ../:/app
       - ../data/:/data
     env_file:
-      - .env
+      - .env  # Contains telegram token
     working_dir: /app
 
 volumes:
-  redis_data:
+  venv:
