@@ -9,6 +9,8 @@ services:
     volumes:
       - ../:/app  # Mount local "app" folder into container
       - ../data/:/data
+    env_file:
+      - .env
     working_dir: /app
 
 volumes:

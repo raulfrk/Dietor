@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from enum import IntEnum, auto
 from functools import partial
@@ -549,7 +550,9 @@ async def set_commands(app):
 
 
 def main():
-    app = Application.builder().token("").post_init(set_commands).build()
+    app = (
+        Application.builder().token(os.getenv("TOKEN")).post_init(set_commands).build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("today", get_day_food_stats))
