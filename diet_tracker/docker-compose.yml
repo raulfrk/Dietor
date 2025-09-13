@@ -1,0 +1,15 @@
+services:
+  python:
+    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: calories_tracker_dockerfile
+    container_name: calories_tracker
+    command: python3 -m diet_tracker.bot
+    volumes:
+      - ../:/app  # Mount local "app" folder into container
+      - ../data/:/data
+    working_dir: /app
+
+volumes:
+  redis_data:
