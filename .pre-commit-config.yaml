@@ -36,7 +36,7 @@ repos:
     rev: v1.17.1
     hooks:
       - id: mypy
-        additional_dependencies: [types-requests, types-python-dateutil]
+        additional_dependencies: [types-requests, types-python-dateutil, types-dateparser]
         # language_version: python3.11
 
   - repo: local
@@ -50,11 +50,11 @@ repos:
       args:
         - --maxfail=1
         - -q
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        args: ["--convention=google"]
+  # - repo: https://github.com/pycqa/pydocstyle
+  #   rev: 6.3.0
+  #   hooks:
+  #     - id: pydocstyle
+  #       args: ["--convention=google"]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:

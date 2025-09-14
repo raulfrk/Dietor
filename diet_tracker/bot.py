@@ -4,6 +4,7 @@ from enum import IntEnum, auto
 from functools import partial
 from pathlib import Path
 
+import dateparser
 from telegram import (
     BotCommand,
     ReplyKeyboardMarkup,
@@ -48,6 +49,8 @@ class States(IntEnum):
     # Food management
     # CREATE
     START_CREATE_FOOD_ENTRY = auto()
+    CREATE_FOOD_ENTRY_DATE = auto()
+    CREATE_FOOD_ENTRY_DATE_OTHER = auto()
     CREATE_FOOD_ENTRY_NAME = auto()
     CREATE_FOOD_ENTRY_KCAL = auto()
     CREATE_FOOD_ENTRY_CONFIRM = auto()
@@ -60,6 +63,8 @@ class States(IntEnum):
     # Exercise management
     # CREATE
     START_CREATE_EXERCISE_ENTRY = auto()
+    CREATE_EXERCISE_ENTRY_DATE = auto()
+    CREATE_EXERCISE_ENTRY_DATE_OTHER = auto()
     CREATE_EXERCISE_ENTRY_NAME = auto()
     CREATE_EXERCISE_ENTRY_KCAL = auto()
     CREATE_EXERCISE_ENTRY_CONFIRM = auto()
@@ -72,6 +77,10 @@ class States(IntEnum):
 
 YESNO_KB = ReplyKeyboardMarkup(
     [["Yes", "No"]], resize_keyboard=True, one_time_keyboard=True
+)
+
+TODAY_YESTERDAY_OTHER_KB = ReplyKeyboardMarkup(
+    [["Today", "Yesterday", "Other"]], resize_keyboard=True, one_time_keyboard=True
 )
 
 
@@ -169,7 +178,44 @@ async def start_create_cycle(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def start_create_food_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Inserting new food entry, please insert the name for the entry."
+        "Inserting new food entry, when is this entry for?",
+        reply_markup=TODAY_YESTERDAY_OTHER_KB,
+    )
+    return States.CREATE_FOOD_ENTRY_DATE
+
+
+async def create_food_entry_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt = update.message.text.strip()
+    if dt == "Today":
+        context.user_data["food_date"] = datetime.now()
+    elif dt == "Yesterday":
+        context.user_data["food_date"] = datetime.now() - timedelta(days=1)
+    else:
+        await update.message.reply_text(
+            "Insert date: ",
+        )
+        return States.CREATE_FOOD_ENTRY_DATE_OTHER
+
+    await update.message.reply_text(
+        "Inserting new food entry, what is the name for this entry?",
+    )
+    return States.CREATE_FOOD_ENTRY_NAME
+
+
+async def create_food_entry_date_other(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    dt = update.message.text.strip()
+
+    parsed_datetime = dateparser.parse(dt)
+    if parsed_datetime is None:
+        await update.message.reply_text(
+            "Invalid date, try again:",
+        )
+        return States.CREATE_FOOD_ENTRY_DATE_OTHER
+    context.user_data["food_date"] = parsed_datetime
+    await update.message.reply_text(
+        "Inserting new food entry, what is the name for this entry?",
     )
     return States.CREATE_FOOD_ENTRY_NAME
 
@@ -208,9 +254,10 @@ async def create_food_entry_kcal(update: Update, context: ContextTypes.DEFAULT_T
 async def create_food_entry_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kcal = context.user_data["food_kcal"]
     food_name = context.user_data["food_name"]
+    food_date = context.user_data["food_date"]
     id = str(update.effective_user.id)
     if update.message.text.lower().startswith("y"):
-        fe = FoodEntry(name=food_name, kcal=kcal)
+        fe = FoodEntry(name=food_name, kcal=kcal, dt=food_date)
         _, sessionMaker = init_database(id, Path("/data"))
         with sessionMaker.begin() as session:
             try:
@@ -224,7 +271,7 @@ async def create_food_entry_confirm(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text("Food added.")
     else:
         await update.message.reply_text("Cancelled")
-    await get_day_food_stats(update, context)
+    await get_day_food_stats(update, context, dt=food_date)
 
     return ConversationHandler.END
 
@@ -233,7 +280,46 @@ async def start_create_exercise_entry(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
     await update.message.reply_text(
-        "Inserting new exercise entry, please insert the name for the entry."
+        "Inserting new exercise entry, when is this entry for?",
+        reply_markup=TODAY_YESTERDAY_OTHER_KB,
+    )
+    return States.CREATE_EXERCISE_ENTRY_DATE
+
+
+async def create_exercise_entry_date(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    dt = update.message.text.strip()
+    if dt == "Today":
+        context.user_data["exercise_date"] = datetime.now()
+    elif dt == "Yesterday":
+        context.user_data["exercise_date"] = datetime.now() - timedelta(days=1)
+    else:
+        await update.message.reply_text(
+            "Insert date: ",
+        )
+        return States.CREATE_EXERCISE_ENTRY_DATE_OTHER
+
+    await update.message.reply_text(
+        "Inserting new exercise entry, what is the name for this entry?",
+    )
+    return States.CREATE_EXERCISE_ENTRY_NAME
+
+
+async def create_exercise_entry_date_other(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    dt = update.message.text.strip()
+
+    parsed_datetime = dateparser.parse(dt)
+    if parsed_datetime is None:
+        await update.message.reply_text(
+            "Invalid date, try again:",
+        )
+        return States.CREATE_EXERCISE_ENTRY_DATE_OTHER
+    context.user_data["exercise_date"] = parsed_datetime
+    await update.message.reply_text(
+        "Inserting new exercise entry, what is the name for this entry?",
     )
     return States.CREATE_EXERCISE_ENTRY_NAME
 
@@ -277,10 +363,11 @@ async def create_exercise_entry_confirm(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
     kcal = context.user_data["exercise_kcal"]
-    food_name = context.user_data["exercise"]
+    exercise_name = context.user_data["exercise"]
+    exercise_date = context.user_data["exercise_date"]
     id = str(update.effective_user.id)
     if update.message.text.lower().startswith("y"):
-        fe = ExerciseEntry(name=food_name, kcal=kcal)
+        fe = ExerciseEntry(name=exercise_name, kcal=kcal, dt=exercise_date)
         _, sessionMaker = init_database(id, Path("/data"))
         with sessionMaker.begin() as session:
             try:
@@ -294,16 +381,19 @@ async def create_exercise_entry_confirm(
         await update.message.reply_text("Exercise added.")
     else:
         await update.message.reply_text("Cancelled")
-    await get_day_food_stats(update, context)
+    await get_day_food_stats(update, context, dt=exercise_date)
 
     return ConversationHandler.END
 
 
 async def get_day_food_stats(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, full: bool = False
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    full: bool = False,
+    dt: datetime = datetime.now(),
 ):
     id = str(update.effective_user.id)
-    daily_stats = get_daily_stats(id, Path("/data"), datetime.now())
+    daily_stats = get_daily_stats(id, Path("/data"), dt)
     if daily_stats is None:
         await update.message.reply_text("No cycle found, create a cycle first.")
     else:
@@ -447,6 +537,14 @@ FOOD_CREATE_ENTRY_CONV = ConversationHandler(
         States.START_CREATE_FOOD_ENTRY: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, start_create_food_entry)
         ],
+        States.CREATE_FOOD_ENTRY_DATE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, create_food_entry_date)
+        ],
+        States.CREATE_FOOD_ENTRY_DATE_OTHER: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, create_food_entry_date_other
+            )
+        ],
         States.CREATE_FOOD_ENTRY_NAME: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, create_food_entry_name)
         ],
@@ -465,6 +563,14 @@ EXERCISE_CREATE_ENTRY_CONV = ConversationHandler(
     states={
         States.START_CREATE_EXERCISE_ENTRY: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, start_create_exercise_entry)
+        ],
+        States.CREATE_EXERCISE_ENTRY_DATE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, create_exercise_entry_date)
+        ],
+        States.CREATE_EXERCISE_ENTRY_DATE_OTHER: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, create_exercise_entry_date_other
+            )
         ],
         States.CREATE_EXERCISE_ENTRY_NAME: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, create_exercise_entry_name)
