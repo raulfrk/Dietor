@@ -50,6 +50,7 @@ repos:
       args:
         - --maxfail=1
         - -q
+  # TODO: refactor
   # - repo: https://github.com/pycqa/pydocstyle
   #   rev: 6.3.0
   #   hooks:
