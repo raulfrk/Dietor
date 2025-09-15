@@ -389,9 +389,15 @@ async def create_exercise_entry_confirm(
 async def get_day_food_stats(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
-    full: bool = False,
-    dt: datetime = datetime.now(),
+    dt: datetime | None = None,
+    relative_day: str = "Today",
 ):
+    if dt is None:
+        match relative_day:
+            case "Yesterday":
+                dt = datetime.today() - timedelta(days=1)
+            case _:
+                dt = datetime.today()
     id = str(update.effective_user.id)
     daily_stats = get_daily_stats(id, Path("/data"), dt)
     if daily_stats is None:
@@ -639,6 +645,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_commands(app):
     commands = [
         BotCommand("today", "Get today's stats"),
+        BotCommand("yesterday", "Get yesterday's stats"),
         BotCommand("week", "Get this week's stats"),
         BotCommand("month", "Get this month's stats"),
         BotCommand("week_full", "Get this week's stats with daily breakdown"),
@@ -660,8 +667,11 @@ def main():
         Application.builder().token(os.getenv("TOKEN")).post_init(set_commands).build()
     )
 
+    get_day_food_stats_yesterday = partial(get_day_food_stats, relative_day="Yesterday")
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("today", get_day_food_stats))
+    app.add_handler(CommandHandler("yesterday", get_day_food_stats_yesterday))
     app.add_handler(CommandHandler("week", get_week_food_stats))
     app.add_handler(CommandHandler("month", get_month_food_stats))
 
